@@ -59,36 +59,52 @@ function App() {
   return (
     <div className={cn.root}>
       <ErrorBoundary>
-        <React.Suspense fallback={fallback}>
-          <NavBar pokemonResource={pokemonResource} />
-        </React.Suspense>
-        <div className={cn.mainContentArea}>
+        {
+          /*
+            SuspenseList coordinates when child instances of Suspense are revealed
+          */
+        }
+        <React.SuspenseList
+          // Controls order in which child Suspense instances are revealed.
+          // `forwards` mean elements are revealed in same order as their DOM order.
+          // `forwards` and `backwards` only apply to direct children
+          revealOrder='forwards'
+          // Controls if/how loading fallbacks for Suspense instances are loaded
+          // `collapsed` means only show fallback for next Suspense instance to
+          // show (based on the revealOrder)
+          tail='collapsed'
+        >
           <React.Suspense fallback={fallback}>
-            <LeftNav />
+            <NavBar pokemonResource={pokemonResource} />
           </React.Suspense>
-          <React.Suspense fallback={fallback}>
-            <MainContent pokemonResource={pokemonResource} />
-          </React.Suspense>
-          <React.Suspense fallback={fallback}>
-            <RightNav pokemonResource={pokemonResource} />
-          </React.Suspense>
-        </div>
+          <div className={cn.mainContentArea}>
+            {
+              /*
+                You can nest SuspenseList instances within each other
+              */
+            }
+            <React.SuspenseList revealOrder='forwards' tail='collapsed'>
+              <React.Suspense fallback={fallback}>
+                <LeftNav />
+              </React.Suspense>
+              <React.SuspenseList
+                // `together` means all Suspense instances are revealed at the same time
+                // once they're all loaded
+                revealOrder='together'
+              >
+                <React.Suspense fallback={fallback}>
+                  <MainContent pokemonResource={pokemonResource} />
+                </React.Suspense>
+                <React.Suspense fallback={fallback}>
+                  <RightNav pokemonResource={pokemonResource} />
+                </React.Suspense>
+              </React.SuspenseList>
+            </React.SuspenseList>
+          </div>
+        </React.SuspenseList>
       </ErrorBoundary>
     </div>
   )
 }
-
-/*
-🦉 Elaboration & Feedback
-After the instruction, copy the URL below into your browser and fill out the form:
-http://ws.kcd.im/?ws=Concurrent%20React&e=Coordinate%20Suspending%20components%20with%20SuspenseList&em=
-*/
-
-////////////////////////////////////////////////////////////////////
-//                                                                //
-//                 Don't make changes below here.                 //
-// But do look at it to see how your code is intended to be used. //
-//                                                                //
-////////////////////////////////////////////////////////////////////
 
 export default App
