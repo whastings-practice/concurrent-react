@@ -3,7 +3,7 @@
 // http://localhost:3000/isolated/exercises/02
 
 import React from 'react'
-import fetchPokemon from '../fetch-pokemon'
+import fetchPokemon, { getImageUrlForPokemon } from '../fetch-pokemon'
 import {
   ErrorBoundary,
   createResource,
@@ -20,50 +20,35 @@ const preloadImage = (src) => {
   })
 }
 
-const imageResourceCache = new Map()
-
-const getImageResource = (src) => {
-  if (imageResourceCache.has(src)) {
-    return imageResourceCache.get(src)
-  }
-
-  const resource = createResource(() => preloadImage(src))
-  imageResourceCache.set(src, resource)
-  return resource
-}
-
-const Image = (props) => {
-  const imageResource = getImageResource(props.src)
-
-  return (
-    // Load image with a suspense resource so Suspense will wait until both the
-    // pokemon data and its image have loaded before ending the loading state.
-    <img src={imageResource.read()} {...props} />
-  )
-}
-
-function PokemonInfo({ pokemonResource}) {
-  const pokemon = pokemonResource.read()
+function PokemonInfo({ pokemonResources }) {
+  const pokemon = pokemonResources.data.read()
+  const imageSrc = pokemonResources.image.read()
 
   return (
     <div>
       <div className="pokemon-info__img-wrapper">
-        <Image src={pokemon.image} alt={pokemon.name} />
+        <img src={imageSrc} alt={pokemon.name} />
       </div>
       <PokemonDataView pokemon={pokemon} />
     </div>
   )
 }
 
-const pokemonResourceCache = new Map()
+const pokemonResourcesCache = new Map()
 
-const getPokemonResource = (name) => {
-  if (pokemonResourceCache.has(name)) {
-    return pokemonResourceCache.get(name)
+const getPokemonResources = (name) => {
+  if (pokemonResourcesCache.has(name)) {
+    return pokemonResourcesCache.get(name)
   }
-  const resource = createResource(() => fetchPokemon(name, 500))
-  pokemonResourceCache.set(name, resource)
-  return resource
+
+  const dataResource = createResource(() => fetchPokemon(name, 500))
+  // Load image with a suspense resource so Suspense will wait until both the
+  // pokemon data and its image have loaded before ending the loading state.
+  const imageResource = createResource(() => preloadImage(getImageUrlForPokemon(name)))
+  const resources = { data: dataResource, image: imageResource }
+
+  pokemonResourcesCache.set(name, resources)
+  return resources
 }
 
 const SUSPENSE_CONFIG = {
@@ -77,7 +62,7 @@ const SUSPENSE_CONFIG = {
 
 function App() {
   const [pokemonName, setPokemonName] = React.useState(null)
-  const [pokemonResource, setPokemonResource] = React.useState(null)
+  const [pokemonResources, setPokemonResources] = React.useState(null)
   // By default, React waits for 100ms to update the DOM after a component
   // in a Suspense boundary first suspends. This way, if the async result comes
   // back quickly, we won't get a quick flash of the loading fallback. But in this case,
@@ -90,7 +75,7 @@ function App() {
     // Use startTransition to make state changes that will result in a component in a Suspense
     // boundary suspending
     startTransition(() => {
-      setPokemonResource(getPokemonResource(newPokemonName))
+      setPokemonResources(getPokemonResources(newPokemonName))
     })
   }
 
@@ -103,12 +88,12 @@ function App() {
         // loading fallback switches on
         className={`pokemon-info ${isPending ? 'pokemon-loading' : ''}`}
       >
-        {pokemonResource ? (
+        {pokemonResources ? (
           <ErrorBoundary>
             <React.Suspense
               fallback={<PokemonInfoFallback name={pokemonName} />}
             >
-              <PokemonInfo pokemonResource={pokemonResource} />
+              <PokemonInfo pokemonResources={pokemonResources} />
             </React.Suspense>
           </ErrorBoundary>
         ) : (
