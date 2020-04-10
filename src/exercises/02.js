@@ -12,18 +12,35 @@ import {
   PokemonDataView,
 } from '../utils'
 
-// By default, all fetches are mocked so we can control the time easily.
-// You can adjust the fetch time with this:
-// window.FETCH_TIME = 3000
-// If you want to make an actual network call for the pokemon
-// then uncomment the following line
-// window.fetch.restoreOriginalFetch()
-// Note that by doing this, the FETCH_TIME will no longer be considered
-// and if you want to slow things down you should use the Network tab
-// in your developer tools to throttle your network to something like "Slow 3G"
+const preloadImage = (src) => {
+  return new Promise((resolve) => {
+    const img = new window.Image()
+    img.src = src
+    img.onload = () => resolve(src)
+  })
+}
 
-// 🐨 Your goal is to refactor this traditional useEffect-style async
-// interaction to suspense with resources. Enjoy!
+const imageResourceCache = new Map()
+
+const getImageResource = (src) => {
+  if (imageResourceCache.has(src)) {
+    return imageResourceCache.get(src)
+  }
+
+  const resource = createResource(() => preloadImage(src))
+  imageResourceCache.set(src, resource)
+  return resource
+}
+
+const Image = (props) => {
+  const imageResource = getImageResource(props.src)
+
+  return (
+    // Load image with a suspense resource so Suspense will wait until both the
+    // pokemon data and its image have loaded before ending the loading state.
+    <img src={imageResource.read()} {...props} />
+  )
+}
 
 function PokemonInfo({ pokemonResource}) {
   const pokemon = pokemonResource.read()
@@ -31,7 +48,7 @@ function PokemonInfo({ pokemonResource}) {
   return (
     <div>
       <div className="pokemon-info__img-wrapper">
-        <img src={pokemon.image} alt={pokemon.name} />
+        <Image src={pokemon.image} alt={pokemon.name} />
       </div>
       <PokemonDataView pokemon={pokemon} />
     </div>
