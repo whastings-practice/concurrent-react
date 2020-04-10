@@ -3,7 +3,7 @@
 // http://localhost:3000/isolated/exercises/01
 
 import React from 'react'
-import {PokemonDataView} from '../utils'
+import { PokemonDataView, PokemonInfoFallback } from '../utils'
 // 🐨 you'll need to import the fetchPokemon function
 // 💰 here you go:
 import fetchPokemon from '../fetch-pokemon'
@@ -11,8 +11,31 @@ import fetchPokemon from '../fetch-pokemon'
 
 // you'll also need the ErrorBoundary component from utils
 // 💰 here you go:
-import {ErrorBoundary} from '../utils'
+import { ErrorBoundary } from '../utils'
 // 💰 use it like this: <ErrorBoundary><SomeOtherComponents /></ErrorBoundary>
+
+const createResource = (asyncFn) => {
+  let error
+  let result
+  const promise = asyncFn().then(
+    (r) => result = r,
+    (e) => error = e,
+  )
+  return {
+    read() {
+      if (error) {
+        throw error // Error boundary will catch it
+      }
+      if (!result) {
+        // This is the current Suspense API for telling Suspense that data is loading
+        // It's likely to change
+        throw promise
+      }
+      return result
+    }
+  }
+}
+
 
 // By default, all fetches are mocked so we can control the time easily.
 // You can adjust the fetch time with this:
@@ -23,35 +46,10 @@ import {ErrorBoundary} from '../utils'
 // Note that by doing this, the FETCH_TIME will no longer be considered
 // and if you want to slow things down you should use the Network tab
 // in your developer tools to throttle your network to something like "Slow 3G"
-
-// 🐨 create the following mutable variable references (using let):
-// pokemon, pokemonError, pokemonPromise
-let pokemon
-let pokemonError
-
-// We don't need the app to be mounted to know that we want to fetch the pokemon
-// named "pikachu" so we can go ahead and do that right here.
-// 🐨 assign the pokemonPromise variable to a call to fetchPokemon('pikachu')
-const pokemonPromise = fetchPokemon('pikachu').then(
-  (p) => pokemon = p,
-  (e) => pokemonError = e,
-)
-
-// 🐨 when the promise resolves, set the pokemon variable to the resolved value
-// 🐨 if the promise fails, set the pokemonError variable to the error
+const pokemonResource = createResource(() => fetchPokemon('pikachu'))
 
 function PokemonInfo() {
-  // 🐨 if pokemonError is defined, then throw it here
-  if (pokemonError) {
-    throw pokemonError // Error boundary will catch it
-  }
-  // 🐨 if there's no pokemon yet, then throw the pokemonPromise
-  // 💰 (no, for real. Like: `throw pokemonPromise`)
-  if (!pokemon) {
-    // This is the current Suspense API for telling Suspense that data is loading
-    // It's likely to change
-    throw pokemonPromise
-  }
+  const pokemon = pokemonResource.read()
 
   // if the code gets it this far, then the pokemon variable is defined and
   // rendering can continue!
@@ -76,7 +74,7 @@ function App() {
       <ErrorBoundary>
         <React.Suspense
           // Fallback rendered when React intercepts thrown promise
-          fallback={<div>Loading...</div>}
+          fallback={<PokemonInfoFallback name='Pikachu' />}
         >
           <PokemonInfo />
         </React.Suspense>
