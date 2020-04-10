@@ -38,20 +38,40 @@ function PokemonInfo({ pokemonResource}) {
   )
 }
 
+const SUSPENSE_CONFIG = {
+  // Loading fallback shows after this many ms.
+  timeoutMs: 2000,
+}
+
 function App() {
   const [pokemonName, setPokemonName] = React.useState(null)
   const [pokemonResource, setPokemonResource] = React.useState(null)
+  // By default, React waits for 100ms to update the DOM after a component
+  // in a Suspense boundary first suspends. This way, if the async result comes
+  // back quickly, we won't get a quick flash of the loading fallback. But in this case,
+  // waiting makes the UI seem laggy. So we can use useTransition to override it.
+  const [startTransition, isPending] = React.useTransition(SUSPENSE_CONFIG)
 
   function handleSubmit(newPokemonName) {
+    // Leaving this outside of startTransition lets it update immediately
     setPokemonName(newPokemonName)
-    setPokemonResource(createResource(() => fetchPokemon(newPokemonName)))
+    // Use startTransition to make state changes that will result in a component in a Suspense
+    // boundary suspending
+    startTransition(() => {
+      setPokemonResource(createResource(() => fetchPokemon(newPokemonName)))
+    })
   }
 
   return (
     <div>
       <PokemonForm onSubmit={handleSubmit} />
       <hr />
-      <div className="pokemon-info">
+      <div
+        className="pokemon-info"
+        // Use isPending to show the user a more subtle loading indicator before the
+        // loading fallback switches on
+        style={{ opacity: isPending ? 0.6: 1 }}
+      >
         {pokemonResource ? (
           <ErrorBoundary>
             <React.Suspense
