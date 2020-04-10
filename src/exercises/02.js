@@ -38,6 +38,17 @@ function PokemonInfo({ pokemonResource}) {
   )
 }
 
+const pokemonResourceCache = new Map()
+
+const getPokemonResource = (name) => {
+  if (pokemonResourceCache.has(name)) {
+    return pokemonResourceCache.get(name)
+  }
+  const resource = createResource(() => fetchPokemon(name, 500))
+  pokemonResourceCache.set(name, resource)
+  return resource
+}
+
 const SUSPENSE_CONFIG = {
   // Loading fallback shows after this many ms.
   timeoutMs: 2000,
@@ -62,7 +73,7 @@ function App() {
     // Use startTransition to make state changes that will result in a component in a Suspense
     // boundary suspending
     startTransition(() => {
-      setPokemonResource(createResource(() => fetchPokemon(newPokemonName, 500)))
+      setPokemonResource(getPokemonResource(newPokemonName))
     })
   }
 
