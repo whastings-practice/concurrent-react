@@ -32,13 +32,19 @@ let pokemonError
 // We don't need the app to be mounted to know that we want to fetch the pokemon
 // named "pikachu" so we can go ahead and do that right here.
 // 🐨 assign the pokemonPromise variable to a call to fetchPokemon('pikachu')
-const pokemonPromise = fetchPokemon('pikachu').then((p) => pokemon = p)
+const pokemonPromise = fetchPokemon('pikachu').then(
+  (p) => pokemon = p,
+  (e) => pokemonError = e,
+)
 
 // 🐨 when the promise resolves, set the pokemon variable to the resolved value
 // 🐨 if the promise fails, set the pokemonError variable to the error
 
 function PokemonInfo() {
   // 🐨 if pokemonError is defined, then throw it here
+  if (pokemonError) {
+    throw pokemonError // Error boundary will catch it
+  }
   // 🐨 if there's no pokemon yet, then throw the pokemonPromise
   // 💰 (no, for real. Like: `throw pokemonPromise`)
   if (!pokemon) {
@@ -67,12 +73,14 @@ function App() {
         🐨 Then wrap all that with an <ErrorBoundary /> to catch errors
         💰 I wrote the ErrorBoundary for you. You can take a look at it in the utils file if you want
       */}
-      <React.Suspense
-        // Fallback rendered when React intercepts thrown promise
-        fallback={<div>Loading...</div>}
-      >
-        <PokemonInfo />
-      </React.Suspense>
+      <ErrorBoundary>
+        <React.Suspense
+          // Fallback rendered when React intercepts thrown promise
+          fallback={<div>Loading...</div>}
+        >
+          <PokemonInfo />
+        </React.Suspense>
+      </ErrorBoundary>
     </div>
   )
 }
