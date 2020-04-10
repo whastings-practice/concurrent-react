@@ -14,19 +14,35 @@ import {fetchUser} from '../fetch-pokemon'
 const delay = time => promiseResult =>
   new Promise(resolve => setTimeout(() => resolve(promiseResult), time))
 
+const preloadableLazy = (dynamicImport) => {
+  let promise
+  const load = () => {
+    if (!promise) {
+      promise = dynamicImport()
+    }
+    return promise
+  }
+  const Component = React.lazy(load)
+  // Add `load` as static component method so component code
+  // can be loaded before component is rendered
+  Component.preload = load
+  return Component
+}
+
 // 🐨 feel free to play around with the delay timings.
-const NavBar = React.lazy(() =>
+const NavBar = preloadableLazy(() =>
   import('../suspense-list/nav-bar').then(delay(500)),
 )
-const LeftNav = React.lazy(() =>
+const LeftNav = preloadableLazy(() =>
   import('../suspense-list/left-nav').then(delay(2000)),
 )
-const MainContent = React.lazy(() =>
+const MainContent = preloadableLazy(() =>
   import('../suspense-list/main-content').then(delay(1500)),
 )
-const RightNav = React.lazy(() =>
+const RightNav = preloadableLazy(() =>
   import('../suspense-list/right-nav').then(delay(1000)),
 )
+const sections = [NavBar, LeftNav, MainContent, RightNav]
 
 const fallback = (
   <div className={cn.spinnerContainer}>
@@ -42,6 +58,12 @@ function App() {
   function handleSubmit(pokemonName) {
     startTransition(() => {
       setPokemonResource(createResource(() => fetchUser(pokemonName)))
+      // SuspenseList does not render the children of Suspense instances until
+      // it's their turn to load (e.g. following revealOrder='forwards').
+      // But since ours are lazy-loaded with React.lazy(), by default they won't start
+      // loading until they're rendered. So we use our `preload` method to load
+      // all of them in parallel.
+      sections.forEach((section) => section.preload())
     })
   }
 
