@@ -60,8 +60,7 @@ const SUSPENSE_CONFIG = {
   busyMinDurationMs: 700,
 }
 
-function App() {
-  const [pokemonName, setPokemonName] = React.useState(null)
+const usePokemonResources = (name) => {
   const [pokemonResources, setPokemonResources] = React.useState(null)
   // By default, React waits for 100ms to update the DOM after a component
   // in a Suspense boundary first suspends. This way, if the async result comes
@@ -69,14 +68,29 @@ function App() {
   // waiting makes the UI seem laggy. So we can use useTransition to override it.
   const [startTransition, isPending] = React.useTransition(SUSPENSE_CONFIG)
 
-  function handleSubmit(newPokemonName) {
-    // Leaving this outside of startTransition lets it update immediately
-    setPokemonName(newPokemonName)
+  // Right now, startTransition doesn't work with useEffect
+  React.useLayoutEffect(() => {
+    if (!name) {
+      return
+    }
+
     // Use startTransition to make state changes that will result in a component in a Suspense
     // boundary suspending
     startTransition(() => {
-      setPokemonResources(getPokemonResources(newPokemonName))
+      setPokemonResources(getPokemonResources(name))
     })
+  }, [name]) // Re-run effect when name changes
+
+  return { pokemonResources, isPending }
+}
+
+function App() {
+  const [pokemonName, setPokemonName] = React.useState(null)
+  const { pokemonResources, isPending } = usePokemonResources(pokemonName)
+
+  function handleSubmit(newPokemonName) {
+    // Leaving this outside of startTransition lets it update immediately
+    setPokemonName(newPokemonName)
   }
 
   return (
