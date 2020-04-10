@@ -41,6 +41,10 @@ function PokemonInfo({ pokemonResource}) {
 const SUSPENSE_CONFIG = {
   // Loading fallback shows after this many ms.
   timeoutMs: 2000,
+  // If loading takes longer than 300ms, keep isPending true until
+  // loading state has lasted 700ms
+  busyDelayMs: 300,
+  busyMinDurationMs: 700,
 }
 
 function App() {
@@ -58,7 +62,7 @@ function App() {
     // Use startTransition to make state changes that will result in a component in a Suspense
     // boundary suspending
     startTransition(() => {
-      setPokemonResource(createResource(() => fetchPokemon(newPokemonName)))
+      setPokemonResource(createResource(() => fetchPokemon(newPokemonName, 500)))
     })
   }
 
@@ -67,10 +71,9 @@ function App() {
       <PokemonForm onSubmit={handleSubmit} />
       <hr />
       <div
-        className="pokemon-info"
         // Use isPending to show the user a more subtle loading indicator before the
         // loading fallback switches on
-        style={{ opacity: isPending ? 0.6: 1 }}
+        className={`pokemon-info ${isPending ? 'pokemon-loading' : ''}`}
       >
         {pokemonResource ? (
           <ErrorBoundary>
